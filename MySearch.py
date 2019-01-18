@@ -382,7 +382,7 @@ class MySearch(object):
 
     def AdjustDefaultCorpus(self, default_corpus):
         '''
-        调整默认搜索库，参数为新库名称,有默认搜索库时，将调整为新搜索库，没有默认搜索库时将设置
+        调整/设置默认搜索库，参数为新库名称,有默认搜索库时，将调整为新搜索库，没有默认搜索库时将设置
         :param default_corpus: str,
                     name of the new default corpus
         :return: 成功返回True，失败返回False
@@ -555,6 +555,9 @@ class MySearch(object):
 
 @pr_runtime
 def test():
+    '''
+    使用之前应该先在本项目文件夹中有一个名为'Poetries1'目录，下边存放待检索文档。
+    '''
     corpus = [
         '这是第一个文档。',
         '这是第二个文档呗！',
