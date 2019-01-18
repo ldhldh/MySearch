@@ -331,10 +331,11 @@ class MySearch(object):
                 filename = files
             for i in range(len(files)):
                 while filename[i] in files2:
-                    filename[i] = filename[i].split('.')[0] + '-副本' + filename[i].split('.')[1] if '.' in filename[i] else filename[i] + '-副本'
+                    filename[i] = filename[i].split('.')[0] + '-副本.' + filename[i].split('.')[1] if '.' in filename[i] else filename[i] + '-副本'
                 os.rename(temp_name + '/' + files[i], corpus_name + '/' + filename[i])
             NewSearch = MySearch()
             NewSearch.Train(corpus_name)
+            NewSearch.SaveModel()
             self.__del_corpus(temp_name)
         except:
             ValueError("AddCorpus() error!")
