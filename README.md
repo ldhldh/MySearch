@@ -100,3 +100,7 @@
 ### 7.DelDocument(self, documents, corpus_name=None) 
   
         删除保存好的语料库的部分语料文档document
+	
+	
+	
+## 作者: ldhldh
