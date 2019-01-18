@@ -95,7 +95,7 @@ class MySearch(object):
         corpus_name:想要删除的语料库名称
         :return:成功返回True,失败将报错
 
-    DelDocument(self, documents, corpus_name=None)
+    DelDocument(self, documents, corpus_name=None) 删除保存好的语料库的部分语料文档document
         删除保存好的语料库的部分语料文档document
         documents: list[str,str,...,str] 待删除的语料文档document的文件名
         corpus_name: str  语料库名
@@ -227,11 +227,11 @@ class MySearch(object):
               "Do you want to continue?(y/n) :" % corpus_path, end='')
         choose = input()
         if choose == 'y' or choose == 'Y':
-            shutil.rmtree(corpus_path)
+            return True
         else:
             raise ValueError('User termination.')
 
-    def __creat_corpus(self, corpus_name=None, filename=None):
+    def __creat_corpus(self, corpus_name=None, filename=None, select=None):
         if not self.corpus_name:
             if corpus_name:
                 self.corpus_name = corpus_name
@@ -240,12 +240,14 @@ class MySearch(object):
             else:
                 self.corpus_name = time.strftime('%Y%m%d%H%M%S', time.localtime(time.time()))
             corpus_path = self.corpus_name + '_corpus'
-            if os.path.exists(corpus_path):
+            if os.path.exists(corpus_path) and select != 'Y':
                 self.__save_select(corpus_path)
+                shutil.rmtree(corpus_path)
             os.mkdir(corpus_path)
             self.files = filename
             if not self.files or len(self.files) != len(self.corpus):
-                print('No filename or filename is not complete')
+                if self.files:
+                    print('No filename or filename is not complete')
                 self.files = []
                 for i in range(len(self.corpus)):
                     self.files.append(str(i)+'.txt')
@@ -264,13 +266,34 @@ class MySearch(object):
             if self.corpus_name[-7:] == '_corpus':
                 self.corpus_name = self.corpus_name[:-7]
             corpus_path = self.corpus_name + '_corpus'
-            if os.path.exists(corpus_path):
+            if os.path.exists(corpus_path) and select != 'Y':
                 self.__save_select(corpus_path)
-            shutil.move(old_path, corpus_path)
+            if old_path != corpus_path:
+                shutil.move(old_path, corpus_path)
+            else:
+                files = os.listdir(old_path)
+                for file in files:
+                    os.unlink(old_path + '/' + file)
+                filename_old = os.listdir(old_path)
+                for index in range(len(self.corpus)):
+                    try:
+                        f = open(corpus_path + '/' + filename_old[index], 'w', encoding='utf-8')
+                        f.write(self.corpus[index])
+                        f.close()
+                    except:
+                        continue
+            if not filename or len(filename) != len(self.corpus):
+                if filename:
+                    print('No filename or filename is not complete')
+            else:
+                self.files = filename
+                files = os.listdir(corpus_path)
+                for index in range(len(files)):
+                    os.rename(corpus_path + '/' + files[index], corpus_path + '/' + filename[index])
         self.corpus_name = corpus_path
         return self.corpus_name[:-7]
 
-    def SaveModel(self, corpus_name=None, filename=None):
+    def SaveModel(self, corpus_name=None, filename=None, select=None):
         '''
         self.Train()之后才能self.SaveModel(),否则将出错
         :param corpus_name:str 保存成名为corpus_name的语料库，缺省时将根据时间生成一个语料库名称
@@ -279,7 +302,7 @@ class MySearch(object):
         '''
         if self.tfidf == None:
             ValueError("SaveModel() must be used after Train()")
-        path = self.__creat_corpus(corpus_name, filename)
+        path = self.__creat_corpus(corpus_name, filename, select)
         sparse_matrix_2_save = []
         sparse_matrix_2_save.append((list(self.tfidf.data), list(self.tfidf.indices), list(self.tfidf.indptr)))
         sparse_matrix_2_save.append(self.tfidf.shape)
@@ -335,7 +358,7 @@ class MySearch(object):
                 os.rename(temp_name + '/' + files[i], corpus_name + '/' + filename[i])
             NewSearch = MySearch()
             NewSearch.Train(corpus_name)
-            NewSearch.SaveModel()
+            NewSearch.SaveModel(select='Y')
             self.__del_corpus(temp_name)
         except:
             ValueError("AddCorpus() error!")
@@ -475,36 +498,22 @@ class MySearch(object):
                   'Please indicate the correct corpus_name.')
 
     def Train(self, argc, e=None):
-        '''
-        Train()将使用argc中的element作为语料文本建立检索模型。
-        :param argc: argc支持str类型和其它Iterable（list, tuple等，其element应为str类型，表示文本）型变量：
-            argc为str类型时，argc代表语料文件夹目录，Train()将使用该目录下的文档建立检索模型。
-            argc为Iterable类型时，argc即待训练语料库，argc中的element应为str类型，表示语料文本，
-        :param e:  e默认为None，启用jieba库，当待使用文本为纯英文或其它 *由空格隔开* 无需分词的语料时，可
-        以令e='e',将不使用jieba库，可一定程度提高效率，但用户词汇无效。
-        :return:成功返回True，失败将报错。
-        '''
-        try:
-            if type(argc) == str:
-                self.corpus_name = argc
-                self.__Path2Corpus()
-            elif isinstance(argc, Iterable):
-                self.corpus = argc
-            if e == 'e':
-                corpus_cut = self.__cut_for_e()
-            else:
-                corpus_cut = self.__cut_corpus()
-
-            vectorizer = CountVectorizer()
-            words = vectorizer.fit_transform(corpus_cut)
-            self.word_dict = vectorizer.vocabulary_
-            self.tfidf = TfidfTransformer(self.norm, self.use_idf, self.smooth_idf,
-                     self.sublinear_tf).fit_transform(words)
-            self.tfidf = self.tfidf.tocsc()
-        except:
-            ValueError("Train() error!")
+        if type(argc) == str:
+            self.corpus_name = argc
+            self.__Path2Corpus()
+        elif isinstance(argc, Iterable):
+            self.corpus = argc
+        if e == 'e':
+            corpus_cut = self.__cut_for_e()
         else:
-            return True
+            corpus_cut = self.__cut_corpus()
+
+        vectorizer = CountVectorizer()
+        words = vectorizer.fit_transform(corpus_cut)
+        self.word_dict = vectorizer.vocabulary_
+        self.tfidf = TfidfTransformer(self.norm, self.use_idf, self.smooth_idf,
+                 self.sublinear_tf).fit_transform(words)
+        self.tfidf = self.tfidf.tocsc()
 
     def __get_scores(self, query_list):
         document_scores = {}
@@ -546,9 +555,6 @@ class MySearch(object):
 
 @pr_runtime
 def test():
-    '''
-    运行时在本目录下应存在名为Poetries1的文件夹，文件夹中存放几个文档
-    '''
     corpus = [
         '这是第一个文档。',
         '这是第二个文档呗！',
@@ -607,9 +613,6 @@ def test2():
 
 @pr_runtime
 def go():
-    '''
-    运行时应存在保存好的默认搜索语料库
-    '''
     t = MySearch()
     res = t.Query('年华')
 
