@@ -95,7 +95,7 @@ class MySearch(object):
         corpus_name:想要删除的语料库名称
         :return:成功返回True,失败将报错
 
-    DelDocument(self, documents, corpus_name=None) 删除保存好的语料库的部分语料文档document
+    DelDocument(self, documents, corpus_name=None)
         删除保存好的语料库的部分语料文档document
         documents: list[str,str,...,str] 待删除的语料文档document的文件名
         corpus_name: str  语料库名
@@ -474,22 +474,36 @@ class MySearch(object):
                   'Please indicate the correct corpus_name.')
 
     def Train(self, argc, e=None):
-        if type(argc) == str:
-            self.corpus_name = argc
-            self.__Path2Corpus()
-        elif isinstance(argc, Iterable):
-            self.corpus = argc
-        if e == 'e':
-            corpus_cut = self.__cut_for_e()
-        else:
-            corpus_cut = self.__cut_corpus()
+        '''
+        Train()将使用argc中的element作为语料文本建立检索模型。
+        :param argc: argc支持str类型和其它Iterable（list, tuple等，其element应为str类型，表示文本）型变量：
+            argc为str类型时，argc代表语料文件夹目录，Train()将使用该目录下的文档建立检索模型。
+            argc为Iterable类型时，argc即待训练语料库，argc中的element应为str类型，表示语料文本，
+        :param e:  e默认为None，启用jieba库，当待使用文本为纯英文或其它 *由空格隔开* 无需分词的语料时，可
+        以令e='e',将不使用jieba库，可一定程度提高效率，但用户词汇无效。
+        :return:成功返回True，失败将报错。
+        '''
+        try:
+            if type(argc) == str:
+                self.corpus_name = argc
+                self.__Path2Corpus()
+            elif isinstance(argc, Iterable):
+                self.corpus = argc
+            if e == 'e':
+                corpus_cut = self.__cut_for_e()
+            else:
+                corpus_cut = self.__cut_corpus()
 
-        vectorizer = CountVectorizer()
-        words = vectorizer.fit_transform(corpus_cut)
-        self.word_dict = vectorizer.vocabulary_
-        self.tfidf = TfidfTransformer(self.norm, self.use_idf, self.smooth_idf,
-                 self.sublinear_tf).fit_transform(words)
-        self.tfidf = self.tfidf.tocsc()
+            vectorizer = CountVectorizer()
+            words = vectorizer.fit_transform(corpus_cut)
+            self.word_dict = vectorizer.vocabulary_
+            self.tfidf = TfidfTransformer(self.norm, self.use_idf, self.smooth_idf,
+                     self.sublinear_tf).fit_transform(words)
+            self.tfidf = self.tfidf.tocsc()
+        except:
+            ValueError("Train() error!")
+        else:
+            return True
 
     def __get_scores(self, query_list):
         document_scores = {}
