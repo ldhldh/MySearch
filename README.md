@@ -1,5 +1,5 @@
 # MySearch描述
-本地语料很多？爬到的文档很多？运行出很多无序结果？我们经常面对一些搜索引擎无法检索的文本/或其它程序运行结果，想要对这些内容进行检索、按相关性排序等。MySearch是我用python3写的，目的在于方便中英文检索的小脚本，中文分词基于jieba，相关性排序基于sklearn的tf-idf计算
+本地语料很多？爬到的文档很多？运行出很多无序结果？我们经常面对一些搜索引擎无法检索的文本/或其它程序运行结果，想要对这些内容进行检索、按相关性排序等。MySearch是我用python3写的，目的在于方便中英文检索的小脚本，中文分词基于jieba，相关性排序基于sklearn的tf-idf计算。另，想要使用其他切词包（例如pkuseg）的，可以先自行切词，再使用.Train(Iterable, 'e')，仍可以运用搜索。
 
 ## 实现以下功能：	
 
@@ -25,6 +25,8 @@
 
 # 用法
 不支持安装成python包。需要手动（垃圾）将"MySearch.py","stop_words.txt","userdict.txt"置于python3项目文件夹中，即可在项目中使用import MySearch加载MySearch.py，之后使用MySearch.func()即可使用MySearch中的函数func()。
+
+
 
 # 具体操作
 ## 示例详见MySearch.py中的test(),test2(),go()
