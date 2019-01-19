@@ -272,6 +272,7 @@ class MySearch(object):
             if os.path.exists(corpus_path) and select != 'Y':
                 self.__save_select(corpus_path)
             if old_path != corpus_path:
+                shutil.rmtree(old_path)
                 shutil.move(old_path, corpus_path)
             else:
                 files = os.listdir(old_path)
