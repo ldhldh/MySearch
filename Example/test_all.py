@@ -62,6 +62,9 @@ def test():
     return t1.corpus_name
 
 def test1(t1_corpus_name):
+    '''
+    删除保存的名为t1_corpus_name的搜索库
+    '''
     t = MySearch.MySearch()
     t.RemoveCorpus(t1_corpus_name)
 
