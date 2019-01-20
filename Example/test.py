@@ -19,7 +19,7 @@ def test():
         print('**********')
         print(document.get('score'))
         print(document.get('content'))
-    print(len(res))
+    print('共' + str(len(res)) + '个检索结果')
 
 if __name__ == '__main__':
     test()
