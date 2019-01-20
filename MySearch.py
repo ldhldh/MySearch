@@ -3,15 +3,13 @@ from sklearn.feature_extraction.text import CountVectorizer
 from scipy.sparse import csc_matrix
 import jieba.posseg as pseg
 import jieba
+import pkuseg
 import codecs
 from collections import Iterable
 import os
 import time
 import copy
 import shutil
-'''
-作者：ldhldh
-'''
 
 def pr_runtime(func):
     '''
@@ -27,13 +25,15 @@ def pr_runtime(func):
 class MySearch(object):
     '''
     该class可以为中/英文语料库（文件夹/Iterable对象）建立基于tf-idf的检索模型，若涉及文件操作（除stop_words.txt，userdict.txt）
-    外，只支持编码utf-8，其中中文分词依赖jieba，tf-idf依赖sklearn
+    外，只支持编码utf-8，其中中文分词可选jieba或者pkuseg，tf-idf依赖sklearn
     实现以下功能：
     1.检索模型、语料库的建立（训练） -- 保存 -- 使用 -- 添加语料（从列表/目录） -- 删除 -- 部分删除
     2.根据搜索词汇，对Iterable元素（元素为字符串）进行相关性排序，返回序列号等
     3.根据搜索词汇，对指定目录下的文件进行相关性排序，返回文件名序列号等
 
-    :param 参数同 sklearn.feature_extraction.text.TfidfTransformer(), 主要是为了支持不同的tf-idf模式
+    :param seg: str 缺省时默认选择jieba进行中文分词，当为'pkuseg'时使用pkuseg进行中文分词
+    :param 参数同 sklearn.feature_extraction.text.TfidfTransformer(), 主要是为了支持不同的tf-idf模式，
+        在Train()中点击相应函数查看介绍。
 
     Example：见test(),test2(),go()
 
@@ -48,8 +48,8 @@ class MySearch(object):
             my_stopword_list: list[str,str,...,str] 待添加的停用词
             :return: 成功返回True，失败返回False
 
-        add_userword(self, my_word_list) 添加词汇，用来优化中文分词，使jieba语料库中没有的词能正确切分。
-            当self.Train()使用e='e'时，不使用jieba，用户词汇无效。
+        add_userword(self, my_word_list) 添加词汇，用来优化中文分词，使jieba、pkuseg语料库中没有的词能正确切分。
+            当self.Train()使用e='e'时，不使用jieba、pkuseg，用户词汇无效。
             my_word_list: list[str,str,...,str] 待添加的分词
             :return:成功返回True，失败返回False
 
@@ -58,8 +58,8 @@ class MySearch(object):
             argc为str类型时，argc代表语料文件夹目录，Train()将使用该目录下的文档建立检索模型。
             argc为Iterable类型时，argc即待训练语料库，argc中的element应为str类型，表示语料文本，
         Train()将使用argc中的element作为语料文本建立检索模型。
-        e默认为None，启用jieba库，当待使用文本为纯英文或其它 *由空格隔开* 无需分词的语料时，可
-        以令e='e',将不使用jieba库，可一定程度提高效率，但用户词汇无效。
+        e默认为None，启用jieba、pkuseg库，当待使用文本为纯英文或其它 *由空格隔开* 无需分词的语料时，可
+        以令e='e',将不使用jieba、pkuseg库，可一定程度提高效率，但用户词汇无效。
 
     Query(self, query_str, corpus_name=None) 查询函数
         query_str为查询字符串，corpus_name为查询语料库名称，corpus_name为None时优先查询self.Train(),
@@ -87,8 +87,8 @@ class MySearch(object):
     GetDefaultCorpusName(self)
         获取当前默认的搜索库名称
 
-    AdjustDefaultCorpus(self, default_corpus)
-        调整默认搜索库，参数为新库名称,有默认搜索库时，将调整为新搜索库，没有默认搜索库时将设置
+    AdjustDefaultCorpus(self, default_corpus=None)
+        调整默认搜索库，参数为新库名称，缺省则使用当前训练的语料库名称，有默认搜索库时，将调整为新搜索库，没有默认搜索库时将设置
         default_corpus: str,
                     name of the new default corpus
         :return: 成功返回True，失败返回False
@@ -104,27 +104,41 @@ class MySearch(object):
         corpus_name: str  语料库名
         :return: 成功将返回True,失败会报错
     '''
-    def __init__(self, norm='l2', use_idf=True, smooth_idf=True,
+    def __init__(self, seg=None, norm='l2', use_idf=True, smooth_idf=True,
                  sublinear_tf=False):
+        '''
+        :param seg: str 缺省时默认选择jieba进行中文分词，当为'pkuseg'时使用pkuseg进行中文分词
+        :param norm,use_idf,use_idf,smooth_idf,sublinear_tf,这几个参数详见sklearn.feature_extraction.text.TfidfTransformer()
+        的说明，在Train()中点击相应函数查看介绍。
+        '''
+        self.seg = seg
+        self.myseg = None
         self.stop_flag = ['x', 'c', 'u', 'd', 'p', 't', 'uj', 'm', 'f', 'r']
         self.stop_word_path = "stop_words.txt"
         self.stopwords = self.__get_stopwords(self.stop_word_path)
+        self.user_word_path = "userdict.txt"
+        self.my_word_list = self.__get_userdict(self.user_word_path)
         self.corpus = []
         self.corpus_name = ''
         self.files = []
         self.tfidf = None
         self.word_dict = {}
-        self.my_word_list = []
-        jieba.load_userdict("userdict.txt")
         self.norm = norm
         self.use_idf = use_idf
         self.smooth_idf = smooth_idf
         self.sublinear_tf = sublinear_tf
 
+
     def __get_stopwords(self, stop_words):
         stopwords = codecs.open(stop_words, 'r').readlines()
         stopwords = [w.strip() for w in stopwords]
         return ['', ' '] + stopwords
+
+    def __get_userdict(self, user_words):
+        with open(user_words, 'r', encoding='utf-8') as f:
+            userwords = f.readlines()
+        userwords = [w.strip().split(' ')[0] for w in userwords if w.strip()]
+        return userwords
 
     def add_stopwords(self, my_stopword_list):
         '''
@@ -140,17 +154,20 @@ class MySearch(object):
 
     def add_userword(self, my_word_list):
         '''
-        添加词汇，用来优化中文分词，使jieba语料库中没有的词能正确切分，
-        add_userword() 使用后，将在下一次self.Train()使用时生效，当self.Train()使用e='e'时，不使用jieba，用户词汇无效。
+        添加词汇，用来优化中文分词，使jieba、pkuseg语料库中没有的词能正确切分，
+        add_userword() 使用后，将在下一次self.Train()使用时生效，当self.Train()使用e='e'时，不使用jieba、pkuseg，用户词汇无效。
         :param my_word_list: list[str,str,...,str] 待添加的分词
         :return:成功返回True，失败返回False
         '''
-        for word in self.my_word_list:
-            if type(word) != str:
-                return False
-            jieba.add_word(word)
-        self.my_word_list = my_word_list
-        return True
+        if self.seg == 'jieba':
+            for word in self.my_word_list:
+                if type(word) != str:
+                    return False
+                jieba.add_word(word)
+            self.my_word_list += my_word_list
+            return True
+        else:
+            self.my_word_list += my_word_list
 
     def __Path2Corpus(self):
         self.files = os.listdir(self.corpus_name)
@@ -161,15 +178,27 @@ class MySearch(object):
 
     def __cut_str(self, text):
         res = ''
-        words = pseg.cut(text)
-        for word, flag in words:
-            if flag not in self.stop_flag and word not in self.stopwords:
-                word_for_search = jieba.cut_for_search(word)
-                for n in word_for_search:
-                    res += n + ' '
+        if self.seg == 'jieba' or self.seg == None:
+            words = pseg.cut(text)
+            for word, flag in words:
+                if flag not in self.stop_flag and word not in self.stopwords:
+                    word_for_search = jieba.cut_for_search(word)
+                    for n in word_for_search:
+                        res += n + ' '
+        elif self.seg == 'pkuseg':
+            if not self.myseg:
+                self.myseg = pkuseg.pkuseg()
+            words = self.myseg.cut(text)
+            for word in words:
+                if word not in self.stopwords:
+                    res += word + ' '
         return res
 
     def __cut_corpus(self):
+        if self.seg == 'jieba' or self.seg == None:
+            jieba.load_userdict(self.user_word_path)
+        elif self.seg == 'pkuseg':
+            self.myseg = pkuseg.pkuseg(user_dict=self.my_word_list)
         corpus_cut = []
         for s in self.corpus:
             corpus_cut.append(self.__cut_str(s))
@@ -181,7 +210,7 @@ class MySearch(object):
             content = ''
             for word in text.split(' '):
                 if word not in self.stopwords:
-                    content += word + ' '
+                    content += word.lower() + ' '
             corpus_cut.append(content)
         return corpus_cut
 
@@ -218,7 +247,6 @@ class MySearch(object):
             try:
                 for document in res:
                     document['filename'] = self.files[document['index']]
-                    print(document['filename'])
             except:
                 pass
         return res
@@ -243,8 +271,9 @@ class MySearch(object):
             else:
                 self.corpus_name = time.strftime('%Y%m%d%H%M%S', time.localtime(time.time()))
             corpus_path = self.corpus_name + '_corpus'
-            if os.path.exists(corpus_path) and select != 'Y':
-                self.__save_select(corpus_path)
+            if os.path.exists(corpus_path):
+                if select != 'Y':
+                    self.__save_select(corpus_path)
                 shutil.rmtree(corpus_path)
             os.mkdir(corpus_path)
             self.files = filename
@@ -278,10 +307,9 @@ class MySearch(object):
                 files = os.listdir(old_path)
                 for file in files:
                     os.unlink(old_path + '/' + file)
-                filename_old = os.listdir(old_path)
                 for index in range(len(self.corpus)):
                     try:
-                        f = open(corpus_path + '/' + filename_old[index], 'w', encoding='utf-8')
+                        f = open(corpus_path + '/' + files[index], 'w', encoding='utf-8')
                         f.write(self.corpus[index])
                         f.close()
                     except:
@@ -360,10 +388,10 @@ class MySearch(object):
                 while filename[i] in files2:
                     filename[i] = filename[i].split('.')[0] + '-副本.' + filename[i].split('.')[1] if '.' in filename[i] else filename[i] + '-副本'
                 os.rename(temp_name + '/' + files[i], corpus_name + '/' + filename[i])
-            NewSearch = MySearch()
+            self.__del_corpus(temp_name)
+            NewSearch = MySearch(self.seg)
             NewSearch.Train(corpus_name)
             NewSearch.SaveModel(select='Y')
-            self.__del_corpus(temp_name)
         except:
             ValueError("AddCorpus() error!")
         else:
@@ -373,24 +401,30 @@ class MySearch(object):
     def GetDefaultCorpusName(self):
         '''
         :return: str
-                当前默认的搜索库名称
+                当前默认的搜索库名称，如果失败将返回False
         '''
         try:
             f = open('venv/default_corpus', 'r', encoding='utf-8')
             default_corpus = f.read()
             f.close()
         except:
-            raise ValueError('Get default_corpus error! '
+            print('Get default_corpus error! '
                              'Make sure venv/default_corpus exist')
+            return False
         return default_corpus
 
-    def AdjustDefaultCorpus(self, default_corpus):
+    def AdjustDefaultCorpus(self, default_corpus=None):
         '''
-        调整/设置默认搜索库，参数为新库名称,有默认搜索库时，将调整为新搜索库，没有默认搜索库时将设置
+        调整默认搜索库，参数为新库名称,缺省时使用当前class的corpus_name。
+        有默认搜索库时，将调整为新搜索库，没有默认搜索库时将设置。
         :param default_corpus: str,
                     name of the new default corpus
         :return: 成功返回True，失败返回False
         '''
+        if default_corpus == None and self.corpus_name:
+            default_corpus = self.corpus_name
+        elif default_corpus == None:
+            ValueError("Missing name of default corpus!")
         exist_list = self.__is_corpus_exit(default_corpus)
         if not exist_list[0]:
             print('Adjust default corpus failed!'
@@ -438,7 +472,7 @@ class MySearch(object):
         self.corpus_name = exist_list[0]
         files = os.listdir(self.corpus_name)
         self.__generate_csc_matrix(exist_list[1])
-        if self.tfidf.shape[1] != len(files) or self.tfidf.shape[1] != len(self.word_dict):
+        if self.tfidf.shape[1] != len(files) or self.tfidf.shape[1] != len(self.word_dict) or self.tfidf.shape[1] == 0:
             ValueError("Error! Corpus was destroyed!\n"
                        "Suggest you .Train() the corpus.")
 
@@ -477,26 +511,38 @@ class MySearch(object):
 
     def DelDocument(self, documents, corpus_name=None):
         '''
-        删除保存好的语料库的部分语料文档document
+        删除保存好的语料库的部分语料文档document，未保存（SaveModel()）不能删除
         :param documents: list[str,str,...,str] 待删除的语料文档document的文件名
         :param corpus_name: str  语料库名
         :return: 成功将返回True,失败会报错
         '''
         if not corpus_name:
             corpus_name = self.corpus_name
+        exist_list = self.__is_corpus_exit(corpus_name)
+        if not exist_list[0]:
+            raise ValueError('no corpus found, %s' % (corpus_name + '_corpus'))
+        if not exist_list[1]:
+            raise ValueError('no model found, %s' % (corpus_name + '_model'))
+        corpus_name = exist_list[0]
         files = os.listdir('.')
         if corpus_name in files:
             files2 = os.listdir(corpus_name)
             try:
                 for file in documents:
+                    if type(file) != str:
+                        ValueError("The element of parameter 1 must be 'str' type,representing the name of the file to be deleted.")
                     if file in files2:
                         os.unlink(corpus_name + '/' + file)
                     else:
-                        print(file + 'not in ' + corpus_name + '/')
+                        print(file + 'not in ' + (corpus_name + '/'))
             except:
                 ValueError('unlink error.')
-            print('Deleted!')
-            return True
+            else:
+                NewSearch = MySearch(self.seg)
+                NewSearch.Train(corpus_name)
+                NewSearch.SaveModel(select='Y')
+                print('Deleted!')
+                return True
         else:
             ValueError('DelDocument() error, for wrong corpus_name.\n'
                   'Please indicate the correct corpus_name.')
@@ -542,94 +588,18 @@ class MySearch(object):
         注：以'_corpus'结尾的文件夹将被作为保存好的语料库，文件夹名即为语料库名，查询保存好的
     语料库时，corpus_name结尾可以带'_corpus'也可以不带。另，'_model'结尾的文件被作为保存好的模型。
         '''
+        if not query_str:
+            print('Query nothing.')
+            return []
         if self.corpus_name == corpus_name:
             corpus_name = None
         if self.tfidf != None and corpus_name == None:
             temp = self.__cut_str(query_str).split(' ')
-            query_list = [x for x in temp if x not in self.stopwords]
+            query_list = [x.lower() for x in temp if x not in self.stopwords]
             document_scores = self.__get_scores(query_list)
             res = self.__show(document_scores)
-        elif self.tfidf != None:
-            newSerch = MySearch()
-            res = newSerch.Query(query_str, corpus_name)
         else:
-            self.__use_model(corpus_name)
-            res = self.Query(query_str)
+            newSerch = MySearch(self.seg)
+            newSerch.__use_model(corpus_name)
+            res = newSerch.Query(query_str)
         return res
-
-@pr_runtime
-def test():
-    '''
-    使用之前应该先在本项目文件夹中有一个名为'Poetries1'目录，下边存放待检索文档。
-    '''
-    corpus = [
-        '这是第一个文档。',
-        '这是第二个文档呗！',
-        '老三.',
-        '难道这就是文档1？',
-    ]
-    t0 = MySearch()
-    t0.Train('Poetries1')
-    t0.SaveModel()
-
-    t = MySearch()
-    t.AdjustDefaultCorpus('Poetries1')
-    t.Train(corpus)
-    t.AddCorpus('Poetries1', filename=['w', 'x', 'y', 'z'])
-    res = t.Query('文档')
-    for document in res:
-        print(document.get('content'))
-    t.SaveModel('test', ['a.txt', 'b.txt', 'c.txt', 'd.txt'])
-    res = t.Query('文档')
-    for document in res:
-        print(document.get('content'))
-    res = t.Query('黄叶', 'Poetries1')
-    for document in res:
-        print(document.get('content'))
-    res = t.Query('文档', 'Poetries1')
-    for document in res:
-        print(document.get('content'))
-    res = t.Query('恶意代码', 'Poetries1')
-    for document in res:
-        print(document.get('content'))
-    t.AdjustDefaultCorpus('test')
-    t2 = MySearch()
-    res = t2.Query('文档')
-    for document in res:
-        print(document.get('content'))
-    t2.RemoveCorpus('test')
-    res = t2.Query('文档')
-    for document in res:
-        print(document.get('content'))
-    t2.DelDocument(['x'], 'Poetries1_corpus')
-    t2.AdjustDefaultCorpus('Poetries')
-
-@pr_runtime
-def test2():
-    Corpus = ['this is the first document.',
-              'this is the second text',
-              'the third document?',
-              'the last one!']
-    t = MySearch()
-    t.Train(Corpus)
-    res = t.Query('the document')
-    print(len(res))
-    for document in res:
-        print('**********')
-        print(document.get('content'))
-
-@pr_runtime
-def go():
-    t = MySearch()
-    res = t.Query('年华')
-
-    for document in res:
-        print('**********')
-        # print(document)
-        content = document.get('content')
-        if content:
-            print(content.replace('<br/>', '\n').replace('\n\n', '\n').replace('\n\n', '\n'))
-    print(len(res))
-
-if __name__ == '__main__':
-    test2()
