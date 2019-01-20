@@ -1,5 +1,5 @@
 # MySearch描述
-本地语料很多？爬到的文档很多？运行出很多无序结果？我们经常面对一些搜索引擎无法检索的文本/或其它程序运行结果，想要对这些内容进行检索、按相关性排序等。MySearch是我用python3写的，目的在于方便中英文检索的小脚本，中文分词基于jieba，相关性排序基于sklearn的tf-idf计算。另，想要使用其他切词包（例如pkuseg）的，可以先自行切词，调整输入格式后，再使用.Train(Iterable, 'e')，仍可以运用搜索。
+本地语料很多？爬到的文档很多？运行出很多无序结果？我们经常面对一些搜索引擎无法检索的文本/或其它程序运行结果，想要对这些内容进行检索、按相关性排序等。MySearch是我用python3写的，目的在于方便中英文检索的小脚本，中文分词支持jieba或者pkuseg，相关性排序基于sklearn的tf-idf计算。另，想要使用其他切词包的，可以先自行切词，调整输入格式后，再使用.Train(Iterable, 'e')，仍可以运用搜索。
 
 ## 实现以下功能：	
 
@@ -29,12 +29,16 @@
 
 
 # 具体操作
-## 示例详见MySearch.py中的test(),test2(),go()
+## 示例详见Example文件夹的test.py,test_e.py,test_all.py
 
 
 ## 1.第一步通常是生成Mysearch class
 
-  	t = MySearch()
+  	t = MySearch() #不带参数表示默认使用jieba进行中文分词
+	
+	or
+	
+	t = MySearch('pkuseg') #使用pkuseg进行中文分词
   
   
 ## 2.介绍一下MySearch.Query(self, query_str, corpus_name=None)吧
@@ -49,7 +53,7 @@
 
         2.5 返回值：list[dict, dict, ..., dict]，其中：dict{'index', 'score', 'content'} or dict{'index', 'score', 'filename', 'content'}。list按照dict的score从大到小排序，score为该dict对应的文档/待搜索内容的tf-idf得分，index为其在原序列中的序列号，content即是内容，存在文件时，filename为文件名。
 
-  注一下：保存好的语料库是以'_corpus'结尾的文件夹，检索模型是'_model'结尾的文件，你可以使用.SaveModel()来保存语料库和检索模型，但是t.SaveModel()之前得得t.Train()一下，否则没有可保存的模型，也会发生错误。.Train()的用法？往下看...
+  注一下：保存好的语料库是以'_corpus'结尾的文件夹，检索模型是'_model'结尾的文件，你可以使用.SaveModel()来保存语料库和检索模型，但是t.SaveModel()之前得t.Train()一下，否则没有可保存的模型，也会发生错误。.Train()的用法？往下看...
   
  
 ## 3.介绍一下MySearch.Train(self, argc, e=None)
@@ -62,7 +66,7 @@
 		  
           argc为Iterable类型时，argc即待训练语料库，argc中的element应为str类型，表示语料文本，
 		  
-      :param e:  e默认为None，启用jieba库，当待使用文本为纯英文或其它 *由空格隔开* 无需分词的语料时，可以令e='e',将不使用jieba库，可一定程度提高效率，但用户词汇无效。
+      :param e:  e默认为None，启用jieba库，当待使用文本为纯英文或其它 *由空格隔开* 无需分词的语料时，可以令e='e',将不使用jieba、pkuseg库，可一定程度提高效率，但用户词汇无效。
 	  
       :return:成功返回True，失败将报错。
 	  
