@@ -24,7 +24,7 @@ def test():
             print('默认语料库受损')
 
     t.Train(Corpus) #建立检索模型，本次输入类型是[str, str, ...str]，也可以是代表语料路径名的str
-    t.SaveModel('新语料库', select='Y') #保存模型,参数1为新库名称，省略时将以当前时间命名，参数2为将文档保存的文件名，缺省则按照index命名
+    t.SaveModel('新语料库') #保存模型,参数1为新库名称，省略时将以当前时间命名，参数2为将文档保存的文件名，缺省则按照index命名
     t.AdjustDefaultCorpus('新语料库') #设置默认搜索库为默认语料库，此种情况下由于在SaveModel中设置了当前t类的语料库名，可以缺省参数，仍然可以成功设置
     print('保存了“新语料库”，并将其设置为默认检索语料库，下面是搜索“过年好，北京”的结果：')
     res = t.Query('过年好，北京')
@@ -39,7 +39,7 @@ def test():
               '南方下雪了吗',
               '杭州的雪景特别漂亮',
               '等到北京下雪的时候，我要堆个雪人'))
-    # 本次Train()的参数是元组。(str,str,...,str)
+    # 本次Train()的参数是元组tuple。(str,str,...,str)
     print('在元组的元素中检索“北京下雪”的结果：')
     show(t1.Query('北京下雪'))
     print('向“新语料库”中添加文档，文档来自刚才的元组元素，这里进行了命名：')
@@ -61,7 +61,6 @@ def test():
 
     return t1.corpus_name
 
-@MySearch.pr_runtime
 def test1(t1_corpus_name):
     t = MySearch.MySearch()
     t.RemoveCorpus(t1_corpus_name)
