@@ -14,10 +14,10 @@ def test():
     t.Train(Corpus, 'e')
     res = t.Query('the document')
 
-    print(len(res))
     for document in res:
         print('**********')
         print(document.get('content'))
+    print('共' + str(len(res)) + '个检索结果')
 
 if __name__ == '__main__':
     test()
