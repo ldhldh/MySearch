@@ -66,7 +66,7 @@
 		  
           argc为Iterable类型时，argc即待训练语料库，argc中的element应为str类型，表示语料文本，
 		  
-      :param e:  e默认为None，启用jieba库，当待使用文本为纯英文或其它 *由空格隔开* 无需分词的语料时，可以令e='e',将不使用jieba、pkuseg库，可一定程度提高效率，但用户词汇无效。
+      :param e:  e默认为None，启用jieba或pkuseg，当待使用文本为纯英文或其它 *由空格隔开* 无需分词的语料时，可以令e='e',将不使用jieba、pkuseg，可一定程度提高效率，但用户词汇无效。
 	  
       :return:成功返回True，失败将报错。
 	  
@@ -105,7 +105,7 @@
 		
 ### 7.DelDocument(self, documents, corpus_name=None) 
   
-        删除保存好的语料库的部分语料文档document
+        删除保存好的语料库的部分语料文档document，documents是文档名称列表，corpus_name指定的语料库不存在将报错
 	
 	
 	
