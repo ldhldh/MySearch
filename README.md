@@ -79,7 +79,7 @@
 		
 ### 2.add_userword(self, my_word_list) 
   
-        添加词汇，用来优化中文分词，使jieba语料库中没有的词能正确切分。
+        添加词汇，用来优化中文分词，使jieba、pkuseg语料库中没有的词能正确切分。
 		
 ### 3.AddCorpus(self, corpus_name, corpus_name2=None, filename=None) 
   
