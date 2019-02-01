@@ -172,8 +172,13 @@ class MySearch(object):
     def __Path2Corpus(self):
         self.files = os.listdir(self.corpus_name)
         for file in self.files:
-            f = open(self.corpus_name + '/' + file, 'r', -1, encoding='utf-8')
-            self.corpus.append(f.read())
+            try:
+                f = open(self.corpus_name + '/' + file, 'r', -1, encoding='utf-8')
+                s = f.read()
+            except:
+                f = open(self.corpus_name + '/' + file, 'r', -1, encoding='gbk')
+                s = f.read()
+            self.corpus.append(s)
             f.close()
 
     def __cut_str(self, text):
@@ -192,6 +197,11 @@ class MySearch(object):
             for word in words:
                 if word not in self.stopwords:
                     res += word + ' '
+        elif self.seg == 'e':
+            words = text.split(' ')
+            for word in words:
+                if word not in self.stopwords:
+                    res += word.lower() + ' '
         return res
 
     def __cut_corpus(self):
@@ -235,13 +245,18 @@ class MySearch(object):
             for document in res:
                 document['content'] = self.corpus[document['index']]
         elif self.files:
-            try:
-                for document in res:
+            for document in res:
+                try:
                     f = open(self.corpus_name + '/' + self.files[document['index']], 'r', encoding='utf-8')
                     document['content'] = f.read()
                     f.close()
-            except:
-                pass
+                except:
+                    try:
+                        f = open(self.corpus_name + '/' + self.files[document['index']], 'r', encoding='gbk')
+                        document['content'] = f.read()
+                        f.close()
+                    except:
+                        continue
 
         if self.files:
             try:
@@ -292,6 +307,8 @@ class MySearch(object):
                     continue
         else:
             old_path = self.corpus_name
+            if corpus_name:
+                self.corpus_name = corpus_name
             self.corpus_name = self.corpus_name.replace('\\', '/')
             if '/' in self.corpus_name:
                 self.corpus_name = self.corpus_name.split('/')[-1]
@@ -301,7 +318,10 @@ class MySearch(object):
             if os.path.exists(corpus_path) and select != 'Y':
                 self.__save_select(corpus_path)
             if old_path != corpus_path:
-                shutil.rmtree(corpus_path)
+                old_path1 = old_path if old_path[-7:] != '_corpus' else old_path[:-7]
+                exist_list = self.__is_corpus_exit(old_path1)
+                if exist_list[1]:
+                    os.unlink(exist_list[1])
                 shutil.move(old_path, corpus_path)
             else:
                 files = os.listdir(old_path)
@@ -313,7 +333,12 @@ class MySearch(object):
                         f.write(self.corpus[index])
                         f.close()
                     except:
-                        continue
+                        try:
+                            f = open(corpus_path + '/' + files[index], 'w', encoding='gbk')
+                            f.write(self.corpus[index])
+                            f.close()
+                        except:
+                            continue
             if not filename or len(filename) != len(self.corpus):
                 if filename:
                     print('No filename or filename is not complete')
