@@ -11,7 +11,7 @@ def test():
               '这不是第二个文档吧：又一年过去，又长了一岁',
               '这是最后的文档：我爱北京天安门']
 
-    t = MySearch.MySearch('pkuseg')
+    t = MySearch.MySearch('pkuseg')#参数缺省或指定'jieba'时使用jieba
     t.Train(Corpus)
     res = t.Query('新年好，今年我要在北京读更多文档')
 
