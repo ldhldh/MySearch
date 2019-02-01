@@ -486,7 +486,7 @@ class MySearch(object):
         self.tfidf = csc_matrix(sparse_matrix_saved[0], sparse_matrix_saved[1])
         self.word_dict = sparse_matrix_saved[2]
 
-    def __use_model(self, corpus_name=None):
+    def use_model(self, corpus_name=None):
         if corpus_name == None:
             corpus_name = self.GetDefaultCorpusName()
         exist_list = self.__is_corpus_exit(corpus_name)
@@ -625,6 +625,6 @@ class MySearch(object):
             res = self.__show(document_scores)
         else:
             newSerch = MySearch(self.seg)
-            newSerch.__use_model(corpus_name)
+            newSerch.use_model(corpus_name)
             res = newSerch.Query(query_str)
         return res
