@@ -121,7 +121,7 @@
 
 	对于文件夹中的训练语料，扩展支持gbk编码
 	
-	将__use_model()改为use_model()，方便管理保存的模型#使用t.use_model('corpus_name')可以依据保存的模型生成t.tfidf、t.word_dict，可用于查看模型，前者为'scipy.sparse.csr.csr_matrix'型稀疏矩阵，表示文本（行）-词（列）-tfidf（内容），其中行列都是由隐示的序号表示，词-序号保存在t.word_dict字典中，词（key）-序号(value)。
+	将__use_model()改为use_model()，方便管理保存的模型#使用t.use_model('corpus_name')可以依据保存的模型生成t.tfidf、t.word_dict，可用于查看模型，前者为'scipy.sparse.csc.csc_matrix'型稀疏矩阵，表示词（行）-文本（列）-tfidf（内容），其中行列都是由隐示的序号表示，词-序号保存在t.word_dict字典中，词（key）-序号(value)，文本序号为文件夹中文件按名称名称排序的序号/或者Iterable对象中的顺序。
 	
 	Train()的返回值改为'scipy.sparse.csr.csr_matrix'型稀疏矩阵，文本（行）-词（列）-词频（内容），方便查看词频，不需要分析时可以忽略该矩阵。
 	
