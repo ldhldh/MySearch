@@ -589,6 +589,8 @@ class MySearch(object):
         self.tfidf = TfidfTransformer(self.norm, self.use_idf, self.smooth_idf,
                  self.sublinear_tf).fit_transform(words)
         self.tfidf = self.tfidf.tocsc()
+        
+        return words
 
     def __get_scores(self, query_list):
         document_scores = {}
