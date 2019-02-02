@@ -68,7 +68,7 @@
 		  
       :param e:  e默认为None，启用jieba或pkuseg，当待使用文本为纯英文或其它 *由空格隔开* 无需分词的语料时，可以令e='e',将不使用jieba、pkuseg，可一定程度提高效率，但用户词汇无效。
 	  
-      :return:成功返回True，失败将报错。
+      :return:成功返回'scipy.sparse.csr.csr_matrix'型稀疏矩阵，文本（行）-词（列）-词频（内容），不需要分析时可以忽略该矩阵；失败将报错。
 	  
 
 ## 4.其它函数在这里简单罗列一下，具体参数和使用方法可以在MySearch.py的注释中查看
@@ -120,5 +120,11 @@
 	修复SaveModel()中的一处bug
 
 	对于文件夹中的训练语料，扩展支持gbk编码
+	
+	将__use_model()改为use_model()，方便管理保存的模型#使用t.use_model('corpus_name')可以依据保存的模型生成t.tfidf、t.word_dict，可用于查看模型，前者为'scipy.sparse.csr.csr_matrix'型稀疏矩阵，表示文本（行）-词（列）-tfidf（内容），其中行列都是由隐示的序号表示，词-序号保存在t.word_dict字典中，词（key）-序号(value)。
+	
+	Train()的返回值改为'scipy.sparse.csr.csr_matrix'型稀疏矩阵，文本（行）-词（列）-词频（内容），方便查看词频，不需要分析时可以忽略该矩阵。
+	
+	
 
 ## 作者: ldhldh
